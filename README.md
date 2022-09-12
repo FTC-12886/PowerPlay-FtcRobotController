@@ -1,7 +1,16 @@
 ## NOTICE
-
+Code for FTC team 12886, PowerPlay 2022-23 season.
 This repository contains the public FTC SDK for the Freight Frenzy (2021-2022) competition season.
 
+## Getting Started (Android Studio internal)
+
+1. If you haven't already, ask someone for access to the FTC-12886 organization. Although you can code without organizational access, it will be helpful to be a part of the organization.
+2. Download and install Android Studio. Do a "standard install" if prompted and accept all terms and conditions. It might take a little bit to install everything.
+3. When you're at the home page, click "Get from VCS". Sign in with your GitHub account. If the sign in doesn't work, generate a personal access token with [these instructions](https://docs.github.com/en/enterprise-server@3.4/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token); be sure to select all the scopes Android Studio asks for.
+4. Select and clone this repository (FTC-12886/PowerPlay-FtcRobotController)
+5. Wait for everything to load up (it might take a bit) and start coding!
+
+## The rest of the readme is from FIRST.
 ## Welcome!
 This GitHub repository contains the source code that is used to build an Android app to control a *FIRST* Tech Challenge competition robot.  To use this SDK, download/clone the entire project to your local computer.
 
