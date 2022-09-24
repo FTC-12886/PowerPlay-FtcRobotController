@@ -15,26 +15,38 @@ public class TestMecanum extends OpMode {
         rearLeft = hardwareMap.get(DcMotor.class, "nameOfMotor2");
         frontRight = hardwareMap.get(DcMotor.class, "nameOfMotor3");
         frontLeft = hardwareMap.get(DcMotor.class, "nameOfMotor4");
+
+
     }
 
     @Override
     public void loop() {
-        float stickX = gamepad1.left_stick_x;
-        float stickY = gamepad1.left_stick_y;
+        float leftStickX = gamepad1.left_stick_x;
+        float leftStickY = gamepad1.left_stick_y;
+        float rightStickX = gamepad1.right_stick_x;
+        float rightStickY = gamepad1.right_stick_y;
         double rearRightPower = 0;
         double rearLeftPower = 0;
         double frontRightPower = 0;
         double frontLeftPower = 0;
 
-        rearRightPower += stickY;
-        rearLeftPower += stickY;
-        frontRightPower += stickY;
-        frontLeftPower += stickY;
+        // mecanum code
+        rearRightPower += leftStickY;
+        rearLeftPower += leftStickY;
+        frontRightPower += leftStickY;
+        frontLeftPower += leftStickY;
 
-        rearRightPower += stickX;
-        rearLeftPower -= stickX;
-        frontRightPower -= stickX;
-        frontLeftPower += stickX;
+        rearRightPower += leftStickX;
+        rearLeftPower -= leftStickX;
+        frontRightPower -= leftStickX;
+        frontLeftPower += leftStickX;
+
+        // turning
+        frontLeftPower += rightStickX;
+        rearLeftPower += rightStickX;
+
+        frontRightPower -= rightStickX;
+        rearRightPower -= rightStickX;
 
         rearRight.setPower(rearRightPower);
         rearLeft.setPower(rearLeftPower);
