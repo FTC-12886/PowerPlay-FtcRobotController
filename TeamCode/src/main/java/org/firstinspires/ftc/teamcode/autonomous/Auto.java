@@ -1,8 +1,12 @@
 package org.firstinspires.ftc.teamcode.autonomous;
 
+import com.acmerobotics.dashboard.FtcDashboard;
+import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
+import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 
 import org.firstinspires.ftc.robotcore.external.ClassFactory;
+import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocalizer;
 import org.firstinspires.ftc.robotcore.external.tfod.Recognition;
@@ -12,8 +16,9 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
+@Autonomous
 public class Auto extends LinearOpMode {
-
+    private final Telemetry telemetry = new MultipleTelemetry(super.telemetry, FtcDashboard.getInstance().getTelemetry());
     private static final String TFOD_MODEL_ASSET = "PowerPlay.tflite";
     // private static final String TFOD_MODEL_FILE  = "/sdcard/FIRST/tflitemodels/CustomTeamModel.tflite";
 
@@ -44,11 +49,14 @@ public class Auto extends LinearOpMode {
 
         telemetry.addData(">", "Press Play to start op mode");
         telemetry.update();
-        while (!isStarted()) {
+        while (opModeInInit()) {
             tfodLoop();
         }
 
-
+        while (opModeIsActive()) {
+            telemetry.addData("wowiieee", parkingLocation);
+            telemetry.update();
+        }
     }
 
     private void initVuforia() {
