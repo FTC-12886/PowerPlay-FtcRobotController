@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode;
 
+
 import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
@@ -12,6 +13,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
 import org.firstinspires.ftc.teamcode.util.CachingImu;
 import org.firstinspires.ftc.teamcode.util.PidfController;
+import static org.firstinspires.ftc.teamcode.RobotSpecifications.*;
 
 import java.util.List;
 
@@ -60,7 +62,7 @@ public class Robot {
         }
 
         armLift.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        armLift.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+//        armLift.setMode(DcMotor.RunMode.RUN_TO_POSITION);
 
         imu.initialize(new IMU.Parameters(RobotSpecifications.revHubOrientationOnRobot));
     }
@@ -93,11 +95,10 @@ public class Robot {
         double yVelocity = velocity*Math.sin(driveAngleUnit.toRadians(angle)); // mm/s
         double turnVelocity = turnAngleUnit.toRadians(angularVelocityPerSec); // rad/s
 
+        // move with arm stuff
         double armAngle = getArmAngle(AngleUnit.RADIANS);
-
         long theTime = System.nanoTime();
-        yVelocity -= -Math.sin(armAngle)*(armAngle-previousArmAngle)/(theTime-previousArmAngleTime); // move with arm
-
+        yVelocity -= -Math.sin(armAngle)*(armAngle-previousArmAngle)/(theTime-previousArmAngleTime);
 
         double turnLinearVelocity = 2*turnVelocity*RobotSpecifications.driveBaseRadius; // mm/s
         double rearRightVelocity = 0;
@@ -108,15 +109,15 @@ public class Robot {
         // no clue if this is right or whether it should be 1/2 or 2 or sqrt(2)/2 or sqrt(2) or something
         double multiplyThing = Math.sqrt(2); //MAYBE???????? TODO Figure out the answer
 
-        rearRightVelocity += multiplyThing*yVelocity;
-        rearLeftVelocity += multiplyThing*yVelocity;
-        frontRightVelocity += multiplyThing*yVelocity;
-        frontLeftVelocity += multiplyThing*yVelocity;
+        rearRightVelocity += 1/rearRightParameters.yPower()*yVelocity;
+        rearLeftVelocity += 1/rearLeftParameters.yPower()*yVelocity;
+        frontRightVelocity += 1/frontRightParameters.yPower()*yVelocity;
+        frontLeftVelocity += 1/frontLeftParameters.yPower()*yVelocity;
 
-        rearRightVelocity -= multiplyThing*xVelocity;
-        rearLeftVelocity += multiplyThing*xVelocity;
-        frontRightVelocity += multiplyThing*xVelocity;
-        frontLeftVelocity -= multiplyThing*xVelocity;
+        rearRightVelocity += 1/ rearRightParameters.xPower()*xVelocity;
+        rearLeftVelocity += 1/rearLeftParameters.xPower()*xVelocity;
+        frontRightVelocity += 1/frontRightParameters.xPower()*xVelocity;
+        frontLeftVelocity += 1/frontLeftParameters.xPower()*xVelocity;
 
         rearRightVelocity += turnLinearVelocity;
         rearLeftVelocity -= turnLinearVelocity;

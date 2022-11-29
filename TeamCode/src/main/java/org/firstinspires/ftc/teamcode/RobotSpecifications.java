@@ -3,6 +3,8 @@ package org.firstinspires.ftc.teamcode;
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+import org.firstinspires.ftc.teamcode.util.Point;
 
 import java.util.function.Function;
 
@@ -14,6 +16,12 @@ public class RobotSpecifications {
     public static final int driveWheelRadius = 49; // mm
     public static final double driveWheelCountsPerMm = driveWheelCpr /(driveWheelRadius*2*Math.PI); // counts per mm
     public static final double driveMotorRadiansPerDriveWheelMm = driveMotorGearRatio/(double)driveWheelRadius;
+
+    // TODO measure this
+    public static final WheelParameters frontLeftParameters = new WheelParameters(Math.sqrt(2)/2, -Math.sqrt(2)/2, new Point(-1,1, DistanceUnit.MM));
+    public static final WheelParameters frontRightParameters = new WheelParameters(Math.sqrt(2)/2, Math.sqrt(2)/2, new Point(1,1, DistanceUnit.MM));
+    public static final WheelParameters rearLeftParameters = new WheelParameters(Math.sqrt(2)/2, Math.sqrt(2)/2, new Point(-1,-1, DistanceUnit.MM));
+    public static final WheelParameters rearRightParameters = new WheelParameters(Math.sqrt(2)/2, -Math.sqrt(2)/2, new Point(1,-1, DistanceUnit.MM));
 
     public static final RevHubOrientationOnRobot revHubOrientationOnRobot =
             new RevHubOrientationOnRobot(RevHubOrientationOnRobot.LogoFacingDirection.BACKWARD,RevHubOrientationOnRobot.UsbFacingDirection.LEFT);
