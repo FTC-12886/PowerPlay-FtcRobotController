@@ -13,6 +13,8 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
 import org.firstinspires.ftc.teamcode.util.CachingImu;
 import org.firstinspires.ftc.teamcode.util.PidfController;
+import org.firstinspires.ftc.teamcode.util.Point;
+
 import static org.firstinspires.ftc.teamcode.RobotSpecifications.*;
 
 import java.util.List;
@@ -32,6 +34,8 @@ public class Robot {
     private double previousArmAngle = 0;
     private double previousArmAngleTime = 0;
 
+    private Point targetPosition;
+
     public Robot(HardwareMap hardwareMap) {
         this.hardwareMap = hardwareMap;
         init();
@@ -43,7 +47,7 @@ public class Robot {
             hub.setBulkCachingMode(LynxModule.BulkCachingMode.AUTO);
         }
 
-        armLift = hardwareMap.get(DcMotorEx.class, "armLift");
+//        armLift = hardwareMap.get(DcMotorEx.class, "armLift");
         driveMotors[0] = rearRight = hardwareMap.get(DcMotorEx.class, "backRight");
         driveMotors[1] = rearLeft = hardwareMap.get(DcMotorEx.class, "backLeft");
         driveMotors[2] = frontRight = hardwareMap.get(DcMotorEx.class, "frontRight");
@@ -61,14 +65,14 @@ public class Robot {
             motor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         }
 
-        armLift.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+//        armLift.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 //        armLift.setMode(DcMotor.RunMode.RUN_TO_POSITION);
 
         imu.initialize(new IMU.Parameters(RobotSpecifications.revHubOrientationOnRobot));
     }
 
     public void drive(double velocityPerSec, DistanceUnit distanceUnit) { // forwards and backwards
-        drive(velocityPerSec, distanceUnit, 0, AngleUnit.RADIANS);
+        drive(velocityPerSec, distanceUnit, 90, AngleUnit.DEGREES);
     }
 
     public void drive(double velocityPerSec, DistanceUnit distanceUnit, double angle, AngleUnit angleUnit) { // translational
@@ -92,13 +96,14 @@ public class Robot {
     public void drive(double velocityPerSec, DistanceUnit distanceUnit, double angle, AngleUnit driveAngleUnit, double angularVelocityPerSec, AngleUnit turnAngleUnit) { // translational and rotational
         double velocity = distanceUnit.toMm(velocityPerSec); // mm/s
         double xVelocity = velocity*Math.cos(driveAngleUnit.toRadians(angle)); // mm/s
+        System.out.println("angle "+Math.toDegrees(angle)+"\txvelo "+xVelocity);
+
         double yVelocity = velocity*Math.sin(driveAngleUnit.toRadians(angle)); // mm/s
         double turnVelocity = turnAngleUnit.toRadians(angularVelocityPerSec); // rad/s
-
         // move with arm stuff
-        double armAngle = getArmAngle(AngleUnit.RADIANS);
-        long theTime = System.nanoTime();
-        yVelocity -= -Math.sin(armAngle)*(armAngle-previousArmAngle)/(theTime-previousArmAngleTime);
+//        double armAngle = getArmAngle(AngleUnit.RADIANS);
+//        long theTime = System.nanoTime();
+//        yVelocity -= -Math.sin(armAngle)*(armAngle-previousArmAngle)/(theTime-previousArmAngleTime);
 
         double turnLinearVelocity = 2*turnVelocity*RobotSpecifications.driveBaseRadius; // mm/s
         double rearRightVelocity = 0;
@@ -109,28 +114,31 @@ public class Robot {
         // no clue if this is right or whether it should be 1/2 or 2 or sqrt(2)/2 or sqrt(2) or something
         double multiplyThing = Math.sqrt(2); //MAYBE???????? TODO Figure out the answer
 
-        rearRightVelocity += 1/rearRightParameters.yPower()*yVelocity;
-        rearLeftVelocity += 1/rearLeftParameters.yPower()*yVelocity;
-        frontRightVelocity += 1/frontRightParameters.yPower()*yVelocity;
-        frontLeftVelocity += 1/frontLeftParameters.yPower()*yVelocity;
+        yVelocity = Double.isNaN(yVelocity) ? 0: yVelocity;
+        rearRightVelocity += rearRightParameters.yPower()*yVelocity;
+        rearLeftVelocity += rearLeftParameters.yPower()*yVelocity;
+        frontRightVelocity += frontRightParameters.yPower()*yVelocity;
+        frontLeftVelocity += frontLeftParameters.yPower()*yVelocity;
 
-        rearRightVelocity += 1/ rearRightParameters.xPower()*xVelocity;
-        rearLeftVelocity += 1/rearLeftParameters.xPower()*xVelocity;
-        frontRightVelocity += 1/frontRightParameters.xPower()*xVelocity;
-        frontLeftVelocity += 1/frontLeftParameters.xPower()*xVelocity;
+        xVelocity = Double.isNaN(xVelocity) ? 0: xVelocity;
+        rearRightVelocity += rearRightParameters.xPower()*xVelocity;
+        rearLeftVelocity += rearLeftParameters.xPower()*xVelocity;
+        frontRightVelocity += frontRightParameters.xPower()*xVelocity;
+        frontLeftVelocity += frontLeftParameters.xPower()*xVelocity;
 
-        rearRightVelocity += turnLinearVelocity;
-        rearLeftVelocity -= turnLinearVelocity;
-        frontRightVelocity += turnLinearVelocity;
-        frontLeftVelocity -= turnLinearVelocity;
+        // TODO how to do?
+        rearRightVelocity -= rearRightParameters.yPower()*turnLinearVelocity;
+        rearLeftVelocity += rearLeftParameters.yPower()*turnLinearVelocity;
+        frontRightVelocity -= frontRightParameters.yPower()*turnLinearVelocity;
+        frontLeftVelocity += frontLeftParameters.yPower()*turnLinearVelocity;
 
         rearRight.setVelocity(rearRightVelocity*RobotSpecifications.driveWheelCountsPerMm);
         rearLeft.setVelocity(rearLeftVelocity*RobotSpecifications.driveWheelCountsPerMm);
         frontRight.setVelocity(frontRightVelocity*RobotSpecifications.driveWheelCountsPerMm);
         frontLeft.setVelocity(frontLeftVelocity*RobotSpecifications.driveWheelCountsPerMm);
 
-        previousArmAngle = armAngle;
-        previousArmAngleTime = theTime;
+//        previousArmAngle = armAngle;
+//        previousArmAngleTime = theTime;
     }
 
     public void stop() {
@@ -160,6 +168,53 @@ public class Robot {
         return angleUnit.fromRadians(RobotSpecifications.armTicsToRadians.apply(armLift.getCurrentPosition()));
     }
 
+    public Point getPosition(DistanceUnit distanceUnit) {
+        double fl = frontLeft.getCurrentPosition()/driveWheelCountsPerMm;
+        double fr = frontRight.getCurrentPosition()/driveWheelCountsPerMm;
+        double rl = rearLeft.getCurrentPosition()/driveWheelCountsPerMm;
+        double rr = rearRight.getCurrentPosition()/driveWheelCountsPerMm;
+
+        double y = fl*frontLeftParameters.yPower()+
+                fr*frontRightParameters.yPower()+
+                rl*rearLeftParameters.yPower()+
+                rr*rearRightParameters.yPower();
+
+        double x = fl*frontLeftParameters.xPower()+
+                fr*frontRightParameters.xPower()+
+                rl*rearLeftParameters.xPower()+
+                rr*rearRightParameters.xPower();
+
+        return new Point(distanceUnit.fromMm(x), distanceUnit.fromMm(y), distanceUnit);
+    }
+
+    public void resetPosition() {
+        for (DcMotorEx motor: driveMotors) {
+            motor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+            motor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        }
+    }
+
+    public void smoothDrive(Point targetPosition) {
+//        Point targetPositionMm = targetPosition.toDistanceUnit(DistanceUnit.MM);
+//        Point position = getPosition(DistanceUnit.MM);
+//        double deltaX = targetPositionMm.x()-position.x();
+//        double deltaY = targetPositionMm.y()-position.y();
+//        double hypot = Math.hypot(deltaX, deltaY);
+//        double theta = Math.atan(deltaY/deltaX);
+//        double velocity = 0;
+//        if (hypot > 100) { // if still far away
+//            velocity =
+//        }
+
+    }
+    public double getYPosition(DistanceUnit distanceUnit) {
+        return getPosition(distanceUnit).y();
+    }
+
+    public double getXPosition(DistanceUnit distanceUnit) {
+        return getPosition(distanceUnit).x();
+
+    }
     // Getters
     public DcMotorEx getRearRight() {
         return rearRight;

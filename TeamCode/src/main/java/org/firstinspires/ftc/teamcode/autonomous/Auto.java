@@ -35,6 +35,8 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import java.util.List;
 import org.firstinspires.ftc.robotcore.external.ClassFactory;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocalizer;
 import org.firstinspires.ftc.robotcore.external.tfod.TFObjectDetector;
 import org.firstinspires.ftc.robotcore.external.tfod.Recognition;
@@ -69,41 +71,66 @@ public class Auto extends LinearOpMode {
     @Override
     public void runOpMode() {
         robot = new Robot(hardwareMap);
-        initVuforia();
-        initTfod();
 
-        if (tfod != null) {
-            tfod.activate();
-            tfod.setZoom(1.0, 16.0/9.0);
-        }
+        try {
+            initVuforia();
+            initTfod();
 
-        telemetry.addData(">", "Press Play to start op mode");
-        telemetry.update();
-
-        while (opModeInInit()) { // look for things
             if (tfod != null) {
-                List<Recognition> updatedRecognitions = tfod.getUpdatedRecognitions();
-                if (updatedRecognitions != null) {
-                    telemetry.addData("# Objects Detected", updatedRecognitions.size());
-                    parkingLocation = 0; // reset average
-                    for (Recognition recognition : updatedRecognitions) {
-                        String label = recognition.getLabel();
-                        if (LABELS[0].equals(label)) {
-                            parkingLocation += 1;
-                        } else if (LABELS[1].equals(label)) {
-                            parkingLocation += 2;
-                        } else if (LABELS[2].equals(label)) {
-                            parkingLocation += 3;
+                tfod.activate();
+                tfod.setZoom(1.0, 16.0 / 9.0);
+            }
+
+            telemetry.addData(">", "Press Play to start op mode");
+            telemetry.update();
+
+            while (opModeInInit() && opModeIsActive()) { // look for things
+                if (tfod != null) {
+                    List<Recognition> updatedRecognitions = tfod.getUpdatedRecognitions();
+                    if (updatedRecognitions != null) {
+                        telemetry.addData("# Objects Detected", updatedRecognitions.size());
+                        parkingLocation = 0; // reset average
+                        for (Recognition recognition : updatedRecognitions) {
+                            String label = recognition.getLabel();
+                            if (LABELS[0].equals(label)) {
+                                parkingLocation += 1;
+                            } else if (LABELS[1].equals(label)) {
+                                parkingLocation += 2;
+                            } else if (LABELS[2].equals(label)) {
+                                parkingLocation += 3;
+                            }
                         }
+                        parkingLocation = (int) Math.round((double) parkingLocation / updatedRecognitions.size()); // take an average
+                        telemetry.addData("location", parkingLocation);
+                        telemetry.update();
                     }
-                    parkingLocation = (int) Math.round((double)parkingLocation/updatedRecognitions.size()); // take an average
-                    telemetry.addData("location", parkingLocation);
-                    telemetry.update();
                 }
             }
+        } catch (Exception e) {
+            telemetry.log().add("tfod no working, assume parking location 1");
+            telemetry.update();
+            parkingLocation = 1;
         }
+        waitForStart();
 
-
+        robot.drive(0.25, DistanceUnit.METER);
+        while (robot.getYPosition(DistanceUnit.METER) < 1) sleep(10);
+        robot.stop();
+        switch (parkingLocation) {
+            case 1:
+                robot.drive(0.25, DistanceUnit.METER, 180, AngleUnit.DEGREES);
+                while (robot.getXPosition(DistanceUnit.METER) > -0.5) sleep(10);
+                robot.stop();
+                break;
+            case 2:
+                break;
+            case 3:
+                robot.drive(0.5, DistanceUnit.METER, 0, AngleUnit.DEGREES);
+                while (robot.getXPosition(DistanceUnit.METER) < 0.5) sleep(10);
+                robot.stop();
+                break;
+        }
+        requestOpModeStop();
     }
 
     private void initVuforia() {

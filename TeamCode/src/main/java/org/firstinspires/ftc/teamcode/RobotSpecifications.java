@@ -28,9 +28,9 @@ public class RobotSpecifications {
 
     // TODO measure these
     public static final double driveBaseRadius = 239; // distance from center of wheel to center of robot; mm
-    public static final double robotLength = 406.4; // mm
-    public static final double robotWidth = 254; // mm
-    public static final double robotHeight = 100; // mm
+//    public static final double robotLength = 406.4; // mm
+//    public static final double robotWidth = 254; // mm
+//    public static final double robotHeight = 100; // mm
 
     // ARM STUFF
     public static final double armRadius = 350; // distance from axle to axle; mm

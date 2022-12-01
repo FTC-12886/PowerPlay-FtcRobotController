@@ -5,6 +5,7 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+import org.firstinspires.ftc.teamcode.util.Point;
 
 @TeleOp
 public class AbstractedTeleOp extends OpMode {
@@ -19,11 +20,20 @@ public class AbstractedTeleOp extends OpMode {
 
     @Override
     public void loop() {
-        double leftStickX = gamepad1.left_stick_x*Math.abs(gamepad1.left_stick_x); // quadratic curve but flipped
+        double leftStickX = gamepad1.left_stick_x*Math.abs(gamepad1.left_stick_x);
         double leftStickY = -gamepad1.left_stick_y*Math.abs(gamepad1.left_stick_y);
         double rightStickX = 2*gamepad1.right_stick_x*Math.abs(gamepad1.right_stick_x);
         double rightStickY = -gamepad1.right_stick_y*Math.abs(gamepad1.right_stick_y);
 
-        robot.drive(Math.hypot(leftStickX, leftStickY), DistanceUnit.METER, Math.atan(leftStickY/leftStickX), AngleUnit.RADIANS, rightStickX, AngleUnit.RADIANS);
+        double theta = Math.atan(leftStickY/leftStickX);
+        if (leftStickX<0 && leftStickY<0) // tan also negative in quad 3
+            theta += Math.PI;
+        else if (leftStickX<0)
+            theta = Math.PI+theta;
+
+        robot.drive(Math.hypot(leftStickX, leftStickY), DistanceUnit.METER, theta, AngleUnit.RADIANS, rightStickX, AngleUnit.RADIANS);
+        Point position = robot.getPosition(DistanceUnit.METER);
+        telemetry.addData("x", position.x());
+        telemetry.addData("y", position.y());
     }
 }

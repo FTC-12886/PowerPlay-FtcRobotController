@@ -27,6 +27,10 @@ public final class Point {
         return distanceUnit;
     }
 
+    public Point toDistanceUnit(DistanceUnit newUnits) {
+        return new Point(newUnits.fromUnit(distanceUnit, x), newUnits.fromUnit(distanceUnit, y), newUnits);
+    }
+
     @Override
     public boolean equals(Object obj) {
         if (obj == this) return true;
