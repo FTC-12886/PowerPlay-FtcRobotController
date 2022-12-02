@@ -33,7 +33,20 @@ public class AbstractedTeleOp extends OpMode {
 
         robot.drive(Math.hypot(leftStickX, leftStickY), DistanceUnit.METER, theta, AngleUnit.RADIANS, rightStickX, AngleUnit.RADIANS);
         Point position = robot.getPosition(DistanceUnit.METER);
+        if (gamepad1.dpad_up) {
+            robot.setArmPosition(robot.getArmPosition() + 20);
+        } else if (gamepad1.dpad_down) {
+            robot.setArmPosition(robot.getArmPosition() - 20);
+        }
+
+        if (gamepad1.dpad_left) {
+            robot.setClawPosition(robot.getClawPosition()-.05);
+        } else if (gamepad1.dpad_right) {
+            robot.setClawPosition(robot.getClawPosition()+.05);
+        }
+
         telemetry.addData("x", position.x());
         telemetry.addData("y", position.y());
+        telemetry.addData("arm", robot.getArmPosition());
     }
 }

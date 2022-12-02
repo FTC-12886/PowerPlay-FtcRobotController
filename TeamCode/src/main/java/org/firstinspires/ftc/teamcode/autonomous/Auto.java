@@ -114,12 +114,12 @@ public class Auto extends LinearOpMode {
         waitForStart();
 
         robot.drive(0.25, DistanceUnit.METER);
-        while (robot.getYPosition(DistanceUnit.METER) < 1) sleep(10);
+        while (robot.getYPosition(DistanceUnit.METER) < 2) sleep(10);
         robot.stop();
         switch (parkingLocation) {
             case 1:
-                robot.drive(0.25, DistanceUnit.METER, 180, AngleUnit.DEGREES);
-                while (robot.getXPosition(DistanceUnit.METER) > -0.5) sleep(10);
+                robot.drive(5, DistanceUnit.METER, 180, AngleUnit.DEGREES);
+                while (robot.getXPosition(DistanceUnit.METER) > -4) sleep(10);
                 robot.stop();
                 break;
             case 2:

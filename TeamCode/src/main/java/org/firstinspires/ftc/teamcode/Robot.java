@@ -7,6 +7,7 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.IMU;
+import com.qualcomm.robotcore.hardware.Servo;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
@@ -26,6 +27,7 @@ public class Robot {
     private DcMotorEx frontRight;
     private DcMotorEx frontLeft;
     private DcMotorEx armLift;
+    private Servo claw;
     private final DcMotorEx[] driveMotors = new DcMotorEx[4];
     private CachingImu imu;
 
@@ -47,17 +49,18 @@ public class Robot {
             hub.setBulkCachingMode(LynxModule.BulkCachingMode.AUTO);
         }
 
-//        armLift = hardwareMap.get(DcMotorEx.class, "armLift");
+        armLift = hardwareMap.get(DcMotorEx.class, "armLift");
+        claw = hardwareMap.get(Servo.class, "claw");
         driveMotors[0] = rearRight = hardwareMap.get(DcMotorEx.class, "backRight");
         driveMotors[1] = rearLeft = hardwareMap.get(DcMotorEx.class, "backLeft");
         driveMotors[2] = frontRight = hardwareMap.get(DcMotorEx.class, "frontRight");
         driveMotors[3] = frontLeft = hardwareMap.get(DcMotorEx.class, "frontLeft");
         imu = new CachingImu(hardwareMap.get(IMU.class, "imu"));
 
-        frontRight.setDirection(DcMotorSimple.Direction.REVERSE);
-        rearRight.setDirection(DcMotorSimple.Direction.FORWARD);
-        frontLeft.setDirection(DcMotorSimple.Direction.REVERSE);
-        rearLeft.setDirection(DcMotorSimple.Direction.FORWARD);
+        frontRight.setDirection(DcMotorSimple.Direction.FORWARD);
+        rearRight.setDirection(DcMotorSimple.Direction.REVERSE);
+        frontLeft.setDirection(DcMotorSimple.Direction.FORWARD);
+        rearLeft.setDirection(DcMotorSimple.Direction.REVERSE);
 
         for (DcMotorEx motor : driveMotors) {
             motor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
@@ -65,10 +68,28 @@ public class Robot {
             motor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         }
 
-//        armLift.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-//        armLift.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        armLift.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        armLift.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 
         imu.initialize(new IMU.Parameters(RobotSpecifications.revHubOrientationOnRobot));
+    }
+
+    public void setArmPosition(int ticks) {
+        armLift.setTargetPosition(ticks);
+        armLift.setPower(0.25);
+        armLift.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+    }
+
+    public int getArmPosition() {
+       return armLift.getCurrentPosition();
+    }
+
+    public void setClawPosition(double position) {
+        claw.setPosition(position);
+    }
+
+    public double getClawPosition() {
+        return claw.getPosition();
     }
 
     public void drive(double velocityPerSec, DistanceUnit distanceUnit) { // forwards and backwards
@@ -96,7 +117,7 @@ public class Robot {
     public void drive(double velocityPerSec, DistanceUnit distanceUnit, double angle, AngleUnit driveAngleUnit, double angularVelocityPerSec, AngleUnit turnAngleUnit) { // translational and rotational
         double velocity = distanceUnit.toMm(velocityPerSec); // mm/s
         double xVelocity = velocity*Math.cos(driveAngleUnit.toRadians(angle)); // mm/s
-        System.out.println("angle "+Math.toDegrees(angle)+"\txvelo "+xVelocity);
+//        System.out.println("angle "+Math.toDegrees(angle)+"\txvelo "+xVelocity);
 
         double yVelocity = velocity*Math.sin(driveAngleUnit.toRadians(angle)); // mm/s
         double turnVelocity = turnAngleUnit.toRadians(angularVelocityPerSec); // rad/s
