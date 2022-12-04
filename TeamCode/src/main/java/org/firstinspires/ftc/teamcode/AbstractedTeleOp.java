@@ -11,6 +11,7 @@ import org.firstinspires.ftc.teamcode.util.Point;
 public class AbstractedTeleOp extends OpMode {
     private Robot robot;
 
+    private double mmAboveGround = RobotSpecifications.clawDistanceAboveGround+RobotSpecifications.armClawDistance;
     @Override
     public void init() {
         robot = new Robot(hardwareMap);
@@ -28,25 +29,37 @@ public class AbstractedTeleOp extends OpMode {
         double theta = Math.atan(leftStickY/leftStickX);
         if (leftStickX<0 && leftStickY<0) // tan also negative in quad 3
             theta += Math.PI;
-        else if (leftStickX<0)
+        else if (leftStickX<0) // quad 2
             theta = Math.PI+theta;
 
         robot.drive(Math.hypot(leftStickX, leftStickY), DistanceUnit.METER, theta, AngleUnit.RADIANS, rightStickX, AngleUnit.RADIANS);
         Point position = robot.getPosition(DistanceUnit.METER);
-        if (gamepad1.dpad_up) {
-            robot.setArmPosition(robot.getArmPosition() + 20);
-        } else if (gamepad1.dpad_down) {
-            robot.setArmPosition(robot.getArmPosition() - 20);
+        int targetArmPos = robot.getTargetArmPosition();
+
+        robot.setArmPosition((int) (targetArmPos+5*rightStickY));
+
+        telemetry.addData("targetarm", targetArmPos);
+
+        if (gamepad1.a) {
+            robot.setArmPosition(0);
+        } else if (gamepad1.b) {
+            robot.setArmPosition(100);
+        } else if (gamepad1.x) {
+            robot.setArmPosition(200);
+        } else if (gamepad1.y) {
+            robot.setArmPosition(350);
         }
 
-        if (gamepad1.dpad_left) {
-            robot.setClawPosition(robot.getClawPosition()-.05);
-        } else if (gamepad1.dpad_right) {
-            robot.setClawPosition(robot.getClawPosition()+.05);
+        if (gamepad1.left_trigger > 0.75) {
+            robot.openClaw();
+        } else if (gamepad1.right_trigger > 0.75) {
+            robot.closeClaw();
         }
 
+        robot.loop();
         telemetry.addData("x", position.x());
         telemetry.addData("y", position.y());
         telemetry.addData("arm", robot.getArmPosition());
+        telemetry.addData("servo", robot.getClawPosition());
     }
 }

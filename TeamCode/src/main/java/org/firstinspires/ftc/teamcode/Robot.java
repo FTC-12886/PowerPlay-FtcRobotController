@@ -15,6 +15,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
 import org.firstinspires.ftc.teamcode.util.CachingImu;
 import org.firstinspires.ftc.teamcode.util.PidfController;
 import org.firstinspires.ftc.teamcode.util.Point;
+import org.firstinspires.ftc.teamcode.util.TrapezoidSmoother;
 
 import static org.firstinspires.ftc.teamcode.RobotSpecifications.*;
 
@@ -35,6 +36,8 @@ public class Robot {
     private AngleUnit turnControllerAngleUnit;
     private double previousArmAngle = 0;
     private double previousArmAngleTime = 0;
+
+    private TrapezoidSmoother armSmoother;
 
     private Point targetPosition;
 
@@ -74,18 +77,50 @@ public class Robot {
         imu.initialize(new IMU.Parameters(RobotSpecifications.revHubOrientationOnRobot));
     }
 
+    public void moveArm(double distanceAboveGround, DistanceUnit unit) {
+        double distanceAboveGroundMm = unit.toMm(distanceAboveGround);
+        double theta = Math.acos(((towerHeightToAxle-towerHeightAboveGround)-(armClawDistance+distanceAboveGroundMm-towerHeightAboveGround))/armRadius); // rad not working
+        int tics = (int) (armCpr/(2*Math.PI)*(theta-lostAngle)); // working
+        System.out.println("height" + (armClawDistance+distanceAboveGroundMm+(towerHeightAboveGround-clawDistanceAboveGround)));
+        setArmPosition(tics);
+    }
+
     public void setArmPosition(int ticks) {
-        armLift.setTargetPosition(ticks);
-        armLift.setPower(0.25);
-        armLift.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        if (armSmoother == null) {
+            armSmoother = new TrapezoidSmoother(getArmPosition(), ticks, 125E-9);
+        } else if (armSmoother.getTarget() != ticks) { // only if new target is diff
+            armSmoother.setTarget(getArmPosition(), (ticks > 350) ? Math.min(ticks, 400) : Math.max(ticks, -50)); // limit arm target settings
+        }
+    }
+
+    public void loop() {
+        if (armSmoother != null) {
+            armLift.setTargetPosition((int) armSmoother.calculate());
+            armLift.setPower(0.25);
+            armLift.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        }
     }
 
     public int getArmPosition() {
        return armLift.getCurrentPosition();
     }
 
+    public int getTargetArmPosition() {
+        if (armSmoother != null)
+            return (int) armSmoother.getTarget();
+        else return 0;
+    }
+
     public void setClawPosition(double position) {
         claw.setPosition(position);
+    }
+
+    public void closeClaw() {
+        setClawPosition(.1);
+    }
+
+    public void openClaw() {
+        setClawPosition(.8);
     }
 
     public double getClawPosition() {
@@ -117,14 +152,21 @@ public class Robot {
     public void drive(double velocityPerSec, DistanceUnit distanceUnit, double angle, AngleUnit driveAngleUnit, double angularVelocityPerSec, AngleUnit turnAngleUnit) { // translational and rotational
         double velocity = distanceUnit.toMm(velocityPerSec); // mm/s
         double xVelocity = velocity*Math.cos(driveAngleUnit.toRadians(angle)); // mm/s
-//        System.out.println("angle "+Math.toDegrees(angle)+"\txvelo "+xVelocity);
+        xVelocity = Double.isNaN(xVelocity) ? 0: xVelocity;
 
         double yVelocity = velocity*Math.sin(driveAngleUnit.toRadians(angle)); // mm/s
+        yVelocity = Double.isNaN(yVelocity) ? 0: yVelocity;
+
         double turnVelocity = turnAngleUnit.toRadians(angularVelocityPerSec); // rad/s
-        // move with arm stuff
-//        double armAngle = getArmAngle(AngleUnit.RADIANS);
-//        long theTime = System.nanoTime();
-//        yVelocity -= -Math.sin(armAngle)*(armAngle-previousArmAngle)/(theTime-previousArmAngleTime);
+        // move with arm stuff TODO FIX
+        double armAngle = getArmAngle(AngleUnit.RADIANS);
+        long theTime = System.nanoTime();
+        double thetaDot = (armAngle-previousArmAngle)/((theTime-previousArmAngleTime)*1E-9); // rad/s
+        double armAdjustment = Math.cos(armAngle)*armRadius*thetaDot; // mm/ns; derivative of sin(theta)*armRadius*thetaDot
+        armAdjustment = (armAdjustment < 0) ? Math.max(armAdjustment, -500) : Math.min(armAdjustment, 500);
+        yVelocity -= armAdjustment; // PLUS OR MINUS??
+//        System.out.println("yvelo "+yVelocity+"\tarmadj "+armAdjustment + "\tfirstthing" + Math.cos(armAngle)*armRadius*thetaDot + "\tthetadot " + thetaDot);
+
 
         double turnLinearVelocity = 2*turnVelocity*RobotSpecifications.driveBaseRadius; // mm/s
         double rearRightVelocity = 0;
@@ -133,15 +175,11 @@ public class Robot {
         double frontLeftVelocity = 0;
 
         // no clue if this is right or whether it should be 1/2 or 2 or sqrt(2)/2 or sqrt(2) or something
-        double multiplyThing = Math.sqrt(2); //MAYBE???????? TODO Figure out the answer
-
-        yVelocity = Double.isNaN(yVelocity) ? 0: yVelocity;
         rearRightVelocity += rearRightParameters.yPower()*yVelocity;
         rearLeftVelocity += rearLeftParameters.yPower()*yVelocity;
         frontRightVelocity += frontRightParameters.yPower()*yVelocity;
         frontLeftVelocity += frontLeftParameters.yPower()*yVelocity;
 
-        xVelocity = Double.isNaN(xVelocity) ? 0: xVelocity;
         rearRightVelocity += rearRightParameters.xPower()*xVelocity;
         rearLeftVelocity += rearLeftParameters.xPower()*xVelocity;
         frontRightVelocity += frontRightParameters.xPower()*xVelocity;
@@ -158,8 +196,8 @@ public class Robot {
         frontRight.setVelocity(frontRightVelocity*RobotSpecifications.driveWheelCountsPerMm);
         frontLeft.setVelocity(frontLeftVelocity*RobotSpecifications.driveWheelCountsPerMm);
 
-//        previousArmAngle = armAngle;
-//        previousArmAngleTime = theTime;
+        previousArmAngle = armAngle;
+        previousArmAngleTime = theTime;
     }
 
     public void stop() {
