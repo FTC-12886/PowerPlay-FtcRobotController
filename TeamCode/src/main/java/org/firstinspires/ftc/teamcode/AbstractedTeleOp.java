@@ -45,9 +45,9 @@ public class AbstractedTeleOp extends OpMode {
         } else if (gamepad1.b) {
             robot.setArmPosition(100);
         } else if (gamepad1.x) {
-            robot.setArmPosition(200);
-        } else if (gamepad1.y) {
             robot.setArmPosition(350);
+        } else if (gamepad1.y) {
+            robot.setArmPosition(650);
         }
 
         if (gamepad1.left_trigger > 0.75) {

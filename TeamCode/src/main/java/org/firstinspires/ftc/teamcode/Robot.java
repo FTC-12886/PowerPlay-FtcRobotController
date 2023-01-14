@@ -2,6 +2,10 @@ package org.firstinspires.ftc.teamcode;
 
 
 import com.qualcomm.hardware.lynx.LynxModule;
+import com.qualcomm.robotcore.eventloop.opmode.OpMode;
+import com.qualcomm.robotcore.eventloop.opmode.OpModeManager;
+import com.qualcomm.robotcore.eventloop.opmode.OpModeManagerImpl;
+import com.qualcomm.robotcore.eventloop.opmode.OpModeManagerNotifier;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
@@ -12,6 +16,7 @@ import com.qualcomm.robotcore.hardware.Servo;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
+import org.firstinspires.ftc.robotcore.internal.system.AppUtil;
 import org.firstinspires.ftc.teamcode.util.CachingImu;
 import org.firstinspires.ftc.teamcode.util.PidfController;
 import org.firstinspires.ftc.teamcode.util.Point;
@@ -19,9 +24,11 @@ import org.firstinspires.ftc.teamcode.util.TrapezoidSmoother;
 
 import static org.firstinspires.ftc.teamcode.RobotSpecifications.*;
 
+import android.app.Activity;
+
 import java.util.List;
 
-public class Robot {
+public class Robot implements OpModeManagerNotifier.Notifications {
     private final HardwareMap hardwareMap;
     private DcMotorEx rearRight;
     private DcMotorEx rearLeft;
@@ -40,6 +47,11 @@ public class Robot {
     private TrapezoidSmoother armSmoother;
 
     private Point targetPosition;
+
+    private Thread worker;
+
+    private OpModeManagerImpl opModeManager;
+
 
     public Robot(HardwareMap hardwareMap) {
         this.hardwareMap = hardwareMap;
@@ -60,10 +72,10 @@ public class Robot {
         driveMotors[3] = frontLeft = hardwareMap.get(DcMotorEx.class, "frontLeft");
         imu = new CachingImu(hardwareMap.get(IMU.class, "imu"));
 
-        frontRight.setDirection(DcMotorSimple.Direction.FORWARD);
-        rearRight.setDirection(DcMotorSimple.Direction.REVERSE);
-        frontLeft.setDirection(DcMotorSimple.Direction.FORWARD);
-        rearLeft.setDirection(DcMotorSimple.Direction.REVERSE);
+        frontRight.setDirection(DcMotorSimple.Direction.REVERSE);
+        rearRight.setDirection(DcMotorSimple.Direction.FORWARD);
+        frontLeft.setDirection(DcMotorSimple.Direction.REVERSE);
+        rearLeft.setDirection(DcMotorSimple.Direction.FORWARD);
 
         for (DcMotorEx motor : driveMotors) {
             motor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
@@ -75,6 +87,20 @@ public class Robot {
         armLift.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 
         imu.initialize(new IMU.Parameters(RobotSpecifications.revHubOrientationOnRobot));
+
+        worker = new Thread() {
+            @Override
+            public void run() {
+                while (!Thread.interrupted())
+                    loop();
+            }
+        };
+
+        Activity activity = AppUtil.getInstance().getRootActivity();
+        opModeManager = OpModeManagerImpl.getOpModeManagerOfActivity(activity);
+        if (opModeManager != null) {
+            opModeManager.registerListener(this);
+        }
     }
 
     public void moveArm(double distanceAboveGround, DistanceUnit unit) {
@@ -164,7 +190,7 @@ public class Robot {
         double thetaDot = (armAngle-previousArmAngle)/((theTime-previousArmAngleTime)*1E-9); // rad/s
         double armAdjustment = Math.cos(armAngle)*armRadius*thetaDot; // mm/ns; derivative of sin(theta)*armRadius*thetaDot
         armAdjustment = (armAdjustment < 0) ? Math.max(armAdjustment, -500) : Math.min(armAdjustment, 500);
-        yVelocity -= armAdjustment; // PLUS OR MINUS??
+//        yVelocity -= armAdjustment; // DISABLED UNTIL GET ACCURATE STATE
 //        System.out.println("yvelo "+yVelocity+"\tarmadj "+armAdjustment + "\tfirstthing" + Math.cos(armAngle)*armRadius*thetaDot + "\tthetadot " + thetaDot);
 
 
@@ -299,4 +325,22 @@ public class Robot {
         return imu;
     }
 
+    @Override
+    public void onOpModePreInit(OpMode opMode) {
+
+    }
+
+    @Override
+    public void onOpModePreStart(OpMode opMode) {
+        worker.start();
+    }
+
+    @Override
+    public void onOpModePostStop(OpMode opMode) {
+        worker.interrupt();
+        if (opModeManager != null) {
+            opModeManager.unregisterListener(this);
+            opModeManager = null;
+        }
+    }
 }

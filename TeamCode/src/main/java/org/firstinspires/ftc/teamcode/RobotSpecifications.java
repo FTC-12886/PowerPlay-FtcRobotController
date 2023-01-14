@@ -18,14 +18,14 @@ public class RobotSpecifications {
     public static final double driveWheelCountsPerMm = driveWheelCpr /(driveWheelRadius*2*Math.PI); // counts per mm
     public static final double driveMotorRadiansPerDriveWheelMm = driveMotorGearRatio/(double)driveWheelRadius;
 
-    // TODO measure this
+    // TODO MEASURE AND TUNE
     public static final WheelParameters frontLeftParameters = new WheelParameters(Math.sqrt(2)/2, -Math.sqrt(2)/2, new Point(-1,1, DistanceUnit.MM));
     public static final WheelParameters frontRightParameters = new WheelParameters(Math.sqrt(2)/2, Math.sqrt(2)/2, new Point(1,1, DistanceUnit.MM));
     public static final WheelParameters rearLeftParameters = new WheelParameters(Math.sqrt(2)/2, Math.sqrt(2)/2, new Point(-1,-1, DistanceUnit.MM));
     public static final WheelParameters rearRightParameters = new WheelParameters(Math.sqrt(2)/2, -Math.sqrt(2)/2, new Point(1,-1, DistanceUnit.MM));
 
     public static final RevHubOrientationOnRobot revHubOrientationOnRobot =
-            new RevHubOrientationOnRobot(RevHubOrientationOnRobot.LogoFacingDirection.BACKWARD,RevHubOrientationOnRobot.UsbFacingDirection.LEFT);
+            new RevHubOrientationOnRobot(RevHubOrientationOnRobot.LogoFacingDirection.BACKWARD,RevHubOrientationOnRobot.UsbFacingDirection.DOWN);
 
     // TODO measure these
     public static final double driveBaseRadius = 239; // distance from center of wheel to center of robot; mm
