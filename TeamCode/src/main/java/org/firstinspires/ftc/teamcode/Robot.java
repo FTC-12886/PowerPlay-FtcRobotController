@@ -1,9 +1,9 @@
 package org.firstinspires.ftc.teamcode;
 
 
+import com.acmerobotics.dashboard.config.Config;
 import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
-import com.qualcomm.robotcore.eventloop.opmode.OpModeManager;
 import com.qualcomm.robotcore.eventloop.opmode.OpModeManagerImpl;
 import com.qualcomm.robotcore.eventloop.opmode.OpModeManagerNotifier;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -28,6 +28,7 @@ import android.app.Activity;
 
 import java.util.List;
 
+@Config
 public class Robot implements OpModeManagerNotifier.Notifications {
     private final HardwareMap hardwareMap;
     private DcMotorEx rearRight;
@@ -53,6 +54,7 @@ public class Robot implements OpModeManagerNotifier.Notifications {
     private OpModeManagerImpl opModeManager;
 
 
+    public static boolean moveWithArmOn = false;
     public Robot(HardwareMap hardwareMap) {
         this.hardwareMap = hardwareMap;
         init();
@@ -103,19 +105,19 @@ public class Robot implements OpModeManagerNotifier.Notifications {
         }
     }
 
-    public void moveArm(double distanceAboveGround, DistanceUnit unit) {
-        double distanceAboveGroundMm = unit.toMm(distanceAboveGround);
-        double theta = Math.acos(((towerHeightToAxle-towerHeightAboveGround)-(armClawDistance+distanceAboveGroundMm-towerHeightAboveGround))/armRadius); // rad not working
-        int tics = (int) (armCpr/(2*Math.PI)*(theta-lostAngle)); // working
-        System.out.println("height" + (armClawDistance+distanceAboveGroundMm+(towerHeightAboveGround-clawDistanceAboveGround)));
-        setArmPosition(tics);
-    }
+//    public void moveArm(double distanceAboveGround, DistanceUnit unit) {
+//        double distanceAboveGroundMm = unit.toMm(distanceAboveGround);
+//        double theta = Math.acos(((towerHeightToAxle-towerHeightAboveGround)-(armClawDistance+distanceAboveGroundMm-towerHeightAboveGround))/armRadius); // rad not working
+//        int tics = (int) (armCpr/(2*Math.PI)*(theta- offsetAngle)); // working
+//        System.out.println("height" + (armClawDistance+distanceAboveGroundMm+(towerHeightAboveGround-clawDistanceAboveGround)));
+//        setArmPosition(tics);
+//    }
 
     public void setArmPosition(int ticks) {
         if (armSmoother == null) {
-            armSmoother = new TrapezoidSmoother(getArmPosition(), ticks, 125E-9);
+            armSmoother = new TrapezoidSmoother(getArmPosition(), ticks, 225E-9); // rate in tics/s
         } else if (armSmoother.getTarget() != ticks) { // only if new target is diff
-            armSmoother.setTarget(getArmPosition(), (ticks > 350) ? Math.min(ticks, 400) : Math.max(ticks, -50)); // limit arm target settings
+            armSmoother.setTarget(getArmPosition(), (ticks > 350) ? Math.min(ticks, 720) : Math.max(ticks, -50)); // limit arm target settings
         }
     }
 
@@ -177,6 +179,7 @@ public class Robot implements OpModeManagerNotifier.Notifications {
      */
     public void drive(double velocityPerSec, DistanceUnit distanceUnit, double angle, AngleUnit driveAngleUnit, double angularVelocityPerSec, AngleUnit turnAngleUnit) { // translational and rotational
         double velocity = distanceUnit.toMm(velocityPerSec); // mm/s
+
         double xVelocity = velocity*Math.cos(driveAngleUnit.toRadians(angle)); // mm/s
         xVelocity = Double.isNaN(xVelocity) ? 0: xVelocity;
 
@@ -184,15 +187,16 @@ public class Robot implements OpModeManagerNotifier.Notifications {
         yVelocity = Double.isNaN(yVelocity) ? 0: yVelocity;
 
         double turnVelocity = turnAngleUnit.toRadians(angularVelocityPerSec); // rad/s
-        // move with arm stuff TODO FIX
+
+        // move with arm stuff
         double armAngle = getArmAngle(AngleUnit.RADIANS);
         long theTime = System.nanoTime();
         double thetaDot = (armAngle-previousArmAngle)/((theTime-previousArmAngleTime)*1E-9); // rad/s
-        double armAdjustment = Math.cos(armAngle)*armRadius*thetaDot; // mm/ns; derivative of sin(theta)*armRadius*thetaDot
-        armAdjustment = (armAdjustment < 0) ? Math.max(armAdjustment, -500) : Math.min(armAdjustment, 500);
-//        yVelocity -= armAdjustment; // DISABLED UNTIL GET ACCURATE STATE
+//        double armAdjustment = Math.cos(armAngle)*armRadius*thetaDot; // mm/s; derivative of sin(theta)*armRadius*thetaDot
+//        armAdjustment = (armAdjustment < 0) ? Math.max(armAdjustment, -500) : Math.min(armAdjustment, 500); // cap the adj rate
+        double armAdjustment = (116.9153*Math.pow(armAngle, 3)-617.4045*Math.pow(armAngle, 2)+730.5056*armAngle+23.30)*thetaDot; // mm/s
+        yVelocity -= moveWithArmOn ? armAdjustment : 0;
 //        System.out.println("yvelo "+yVelocity+"\tarmadj "+armAdjustment + "\tfirstthing" + Math.cos(armAngle)*armRadius*thetaDot + "\tthetadot " + thetaDot);
-
 
         double turnLinearVelocity = 2*turnVelocity*RobotSpecifications.driveBaseRadius; // mm/s
         double rearRightVelocity = 0;
@@ -259,15 +263,15 @@ public class Robot implements OpModeManagerNotifier.Notifications {
         double rl = rearLeft.getCurrentPosition()/driveWheelCountsPerMm;
         double rr = rearRight.getCurrentPosition()/driveWheelCountsPerMm;
 
-        double y = fl*frontLeftParameters.yPower()+
+        double y = (fl*frontLeftParameters.yPower()+
                 fr*frontRightParameters.yPower()+
                 rl*rearLeftParameters.yPower()+
-                rr*rearRightParameters.yPower();
+                rr*rearRightParameters.yPower())/4;
 
-        double x = fl*frontLeftParameters.xPower()+
+        double x = (fl*frontLeftParameters.xPower()+
                 fr*frontRightParameters.xPower()+
                 rl*rearLeftParameters.xPower()+
-                rr*rearRightParameters.xPower();
+                rr*rearRightParameters.xPower())/4;
 
         return new Point(distanceUnit.fromMm(x), distanceUnit.fromMm(y), distanceUnit);
     }
